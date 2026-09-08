@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, "claude/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: shamwari-ai/.github/.github/workflows/reusable-ci-python-piptools.yml@main
+    with:
+      import-check: "import main, ingest_ground; print(main.app.title, main.app.version)"
+
+  secrets:
+    uses: shamwari-ai/.github/.github/workflows/reusable-gitleaks.yml@main
+
+  codeql:
+    uses: shamwari-ai/.github/.github/workflows/reusable-codeql.yml@main
+    with:
+      languages: '["python"]'
