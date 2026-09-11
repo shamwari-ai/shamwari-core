@@ -1,30 +1,80 @@
-# shamwari-core
+# Shamwari Core
 
-The Core service. Python / FastAPI. Owns MongoDB and Postgres.
+> The service that holds the database credentials and the authoritative scope gate. Python and FastAPI, on Nyuchi infrastructure.
 
-> **This branch is scaffolding.** `main` is deliberately empty so the
-> extraction can `git subtree split` `core/` **and** `db/` out of
-> [`shamwari`](https://github.com/shamwari-ai/shamwari) and push history
-> straight in. Merge this branch **after** that import lands.
+[![Lint](https://github.com/shamwari-ai/shamwari-core/actions/workflows/lint.yml/badge.svg)](https://github.com/shamwari-ai/shamwari-core/actions/workflows/lint.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
+
+**Default branch:** `scaffold` | **Code still lives in:** [`shamwari/core`](https://github.com/shamwari-ai/shamwari/tree/main/core) | **Docs:** [docs.shamwari.ai/architecture](https://docs.shamwari.ai/architecture)
+
+---
+
+## What it is
+
+This repository will own Shamwari Core. It does not own it yet.
+
+`scaffold` — the default branch, and the one you are reading — holds a
+licence, CI wiring and this file. `main` is deliberately empty so the
+extraction can `git subtree split` `core/` **and** `db/` out of
+[`shamwari`](https://github.com/shamwari-ai/shamwari) and push history
+straight in. Merge `scaffold` **after** that import lands.
+
+Core is the half of the architecture that is allowed to hold credentials.
+The edge Worker holds none; Core holds them all, and does not run on the
+edge. That is the line the whole two-service split is drawn along.
+
+## What it serves
+
+| Endpoint              |                                                 |
+| --------------------- | ----------------------------------------------- |
+| `POST /auth/verify`   | API key verification, cached in the Worker's KV |
+| `POST /ground/search` | retrieval over the corpus                       |
+| `GET /guardrails`     | policy the Worker applies at the edge           |
+| `POST /sink/bulk`     | the queue consumer's destination                |
+| `GET /rollup`         | usage aggregates                                |
+| `GET /health`         | liveness                                        |
+
+Three more are **missing**, and
+[`shamwari-platform`](https://github.com/shamwari-ai/shamwari-platform) is
+blocked on all three. They should be added here _before_ that repo's build
+starts:
+
+| Endpoint                | Status      |
+| ----------------------- | ----------- |
+| Key issuance            | **missing** |
+| Key revocation          | **missing** |
+| Per-key usage breakdown | **missing** |
 
 ## `db/` comes with it — never on its own
 
-`ingest_ground.py` writes to both stores, and the schema is meaningless
-apart from the service that reads it. Extracting `db/` separately invites
-someone to run a migration nothing is testing against. The applied-migration
-record in `shamwari`'s `CLAUDE.md` must stay next to the code that depends
-on it.
+`ingest_ground.py` writes to both stores, and the schema is meaningless apart
+from the service that reads it. Extracting `db/` separately invites someone to
+run a migration nothing is testing against. The applied-migration record in
+`shamwari`'s `CLAUDE.md` must stay next to the code that depends on it.
+
+The two stores are not used by the same process. `main.py` — the API — talks
+to MongoDB through `motor`. `ingest_ground.py` — the corpus CLI — talks to
+both MongoDB and Postgres (`asyncpg`, against Supabase), because source
+licensing, `ground_eligible` and `mind_eligible` live in Postgres while the
+chunks live in Mongo.
+
+Ground's embeddings are locked to `@cf/baai/bge-m3` at **1024 dimensions**,
+which is what the vector index and the already-embedded corpus assume.
+`ingest_ground.py` hard-fails on a dimension mismatch rather than writing
+vectors nothing can query. Keep that behaviour.
 
 ## Rule 1 is authoritative here
 
 `main.py::resolve_scope` is the authoritative half of the scope gate; the
 fail-fast half is `src/scope.ts` in
-[`shamwari-gateway`](https://github.com/shamwari-ai/shamwari-gateway).
+[`shamwari-gateway`](https://github.com/shamwari-ai/shamwari-gateway), which
+cannot override this one.
 
-The two are implemented **independently on purpose**. Do not factor them
-into a shared package — that would leave the sovereignty claim resting on a
-single function. A vendored contract test asserting both agree is the
-intended fix.
+The two are implemented **independently on purpose**. Do not factor them into
+a shared package — that would leave the sovereignty claim resting on a single
+function. A vendored contract test asserting both agree is the intended fix.
 
 ## Dependencies are hash-pinned
 
@@ -34,22 +84,13 @@ offline before installing, so a stale lock is named as such instead of
 surfacing later as a confusing `ImportError`, then installs with
 `--require-hashes` so a line missing a hash fails outright.
 
-This is also why Dependabot's `pip` ecosystem is left disabled — it edits
+The lock is resolved for CPython 3.11 on Linux, which is what CI and the
+deploy target run. `uvicorn[standard]` pulls platform-specific wheels, so the
+hashes will not satisfy a macOS or Windows install — develop against
+`requirements.in` there.
+
+This is also why Dependabot's `pip` ecosystem is left disabled: it edits
 `requirements.txt` directly and would strip the hashes.
-
-## Three endpoints are missing
-
-`shamwari-platform` is blocked on these, and they should be added here
-_before_ that repo's build starts:
-
-| Endpoint                | Status      |
-| ----------------------- | ----------- |
-| Key issuance            | **missing** |
-| Key revocation          | **missing** |
-| Per-key usage breakdown | **missing** |
-
-`POST /auth/verify`, `POST /ground/search`, `POST /sink/bulk` and
-`GET /rollup` already exist.
 
 ## Export the OpenAPI document
 
@@ -59,7 +100,27 @@ Worker↔Core drift into a build error instead of a production 500 —
 `GroundQuery.embedding` being pinned to exactly 1024 floats is the kind of
 constraint that should be enforced by generated types, not a comment.
 
-## Related
+## Ecosystem
 
-- [`shamwari`](https://github.com/shamwari-ai/shamwari) — umbrella
+- [`shamwari`](https://github.com/shamwari-ai/shamwari) — the umbrella;
+  `CLAUDE.md` holds the applied-migration log and both rules' reasoning
+- [`shamwari-gateway`](https://github.com/shamwari-ai/shamwari-gateway) — the
+  Worker that calls every endpoint above
+- [`shamwari-platform`](https://github.com/shamwari-ai/shamwari-platform) —
+  blocked on the three missing endpoints
 - [Org standards](https://github.com/shamwari-ai/.github/blob/main/ORG_STANDARDS.md)
+
+## Contributing
+
+See the org's
+[CONTRIBUTING.md](https://github.com/shamwari-ai/.github/blob/main/CONTRIBUTING.md),
+[SECURITY.md](https://github.com/shamwari-ai/.github/blob/main/SECURITY.md) and
+[CODE_OF_CONDUCT.md](https://github.com/shamwari-ai/.github/blob/main/CODE_OF_CONDUCT.md).
+
+## Licence
+
+Licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+— see `LICENSE` and `NOTICE`.
+
+© Bundu Foundation. Shamwari is Bundu Foundation IP, sold commercially under
+Nyuchi Africa.
