@@ -40,12 +40,12 @@ This is also why Dependabot's `pip` ecosystem is left disabled — it edits
 ## Three endpoints are missing
 
 `shamwari-platform` is blocked on these, and they should be added here
-*before* that repo's build starts:
+_before_ that repo's build starts:
 
-| Endpoint | Status |
-|---|---|
-| Key issuance | **missing** |
-| Key revocation | **missing** |
+| Endpoint                | Status      |
+| ----------------------- | ----------- |
+| Key issuance            | **missing** |
+| Key revocation          | **missing** |
 | Per-key usage breakdown | **missing** |
 
 `POST /auth/verify`, `POST /ground/search`, `POST /sink/bulk` and
