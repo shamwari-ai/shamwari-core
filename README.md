@@ -7,7 +7,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
 
-**Default branch:** `scaffold` | **Code still lives in:** [`shamwari/core`](https://github.com/shamwari-ai/shamwari/tree/main/core) | **Docs:** [docs.shamwari.ai/architecture](https://docs.shamwari.ai/architecture)
+**Default branch:** `main` | **Code still lives in:** [`shamwari/core`](https://github.com/shamwari-ai/shamwari/tree/main/core) | **Docs:** [docs.shamwari.ai/architecture](https://docs.shamwari.ai/architecture)
 
 ---
 
@@ -15,11 +15,10 @@
 
 This repository will own Shamwari Core. It does not own it yet.
 
-`scaffold` — the default branch, and the one you are reading — holds a
-licence, CI wiring and this file. `main` is deliberately empty so the
-extraction can `git subtree split` `core/` **and** `db/` out of
-[`shamwari`](https://github.com/shamwari-ai/shamwari) and push history
-straight in. Merge `scaffold` **after** that import lands.
+`main` is the default branch and holds a licence, CI wiring and this file.
+The code is not here yet: the extraction will `git subtree split` `core/` **and** `db/` out of
+[`shamwari`](https://github.com/shamwari-ai/shamwari) and merge that history
+into `main`.
 
 Core is the half of the architecture that is allowed to hold credentials.
 The edge Worker holds none; Core holds them all, and does not run on the
