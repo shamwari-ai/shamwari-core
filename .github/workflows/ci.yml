@@ -10,6 +10,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   ci:
     uses: shamwari-ai/.github/.github/workflows/reusable-ci-python-piptools.yml@main
@@ -20,6 +23,9 @@ jobs:
     uses: shamwari-ai/.github/.github/workflows/reusable-gitleaks.yml@main
 
   codeql:
+    permissions:
+      contents: read
+      security-events: write
     uses: shamwari-ai/.github/.github/workflows/reusable-codeql.yml@main
     with:
       languages: '["python"]'
