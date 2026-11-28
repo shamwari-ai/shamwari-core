@@ -25,7 +25,11 @@ jobs:
           persist-credentials: false
       - id: find
         run: |
-          if [ -f pyproject.toml ] || ls requirements*.in requirements*.txt >/dev/null 2>&1; then echo "code=true" >> "$GITHUB_OUTPUT"; else echo "code=false" >> "$GITHUB_OUTPUT"; fi
+          code=false
+          if [ -f pyproject.toml ] || ls requirements*.in requirements*.txt >/dev/null 2>&1; then
+            code=true
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
   ci:
     needs: detect
     if: needs.detect.outputs.code == 'true'
